@@ -235,7 +235,15 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .nums { display: inline-flex; align-items: center; gap: 4px; }
 .rst { width: 26px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--ink); font: 14px/1 system-ui, sans-serif; cursor: pointer; }
 .rst.dim { color: var(--muted); opacity: .45; }
-.stagebtn { display: none; }
+.stage { position: relative; overflow: hidden; touch-action: none; }
+canvas { touch-action: none; transform-origin: 50% 50%; will-change: transform; cursor: zoom-in; }
+canvas.zoomed { cursor: grab; }
+.stagetools { position: absolute; right: 8px; bottom: 8px; z-index: 3; display: flex; gap: 8px; }
+.stagebtn { display: flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 17px; background: rgba(17, 21, 20, .85); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+.stagebtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.app.full { display: block; }
+.app.full .panel, .app.full .panel-body, .app.full .tabs, .app.full .panel-foot, .app.full .panel-head h1 { display: none; }
+.app.full .stage { height: 100vh; height: 100dvh; padding: 6px; }
 details.sec { margin: 0 0 4px; border-top: 1px solid var(--line); }
 details.sec:first-of-type { border-top: 0; }
 details.sec > summary { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; list-style: none; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
@@ -248,8 +256,7 @@ details.sec[open] { padding-bottom: 4px; }
   /* Handy: Vorschau oben, darunter Aktionsleiste, Reiter und ein scrollender Bereich */
   .app { position: relative; display: flex; flex-direction: column; }
   .panel, .panel-head { display: contents; }
-  .stage { order: 0; flex: 0 0 var(--stageH, 30dvh); position: relative; padding: 8px; }
-  .stagebtn { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: block; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: rgba(17, 21, 20, .85); color: var(--ink); font-size: 17px; cursor: pointer; }
+  .stage { order: 0; flex: 0 0 46dvh; padding: 8px; }
   .panel-head h1 { position: absolute; top: 6px; right: 8px; z-index: 6; margin: 0; font-size: 0; }
   .panel-head h1::before { display: none; }
   .panel-foot { flex: none; order: 1; grid-template-columns: auto 1fr auto; gap: 8px; padding: 7px 10px; border-top: 1px solid var(--line); background: var(--panel); }
@@ -263,6 +270,7 @@ details.sec[open] { padding-bottom: 4px; }
 @media (orientation: landscape) and (max-height: 520px) {
   .app { display: grid; grid-template-columns: minmax(0, 1fr) 46%; grid-template-rows: auto minmax(0, 1fr) auto; }
   .stage { grid-column: 1; grid-row: 1 / 4; }
+  .app.full .stage { grid-row: auto; }
   .panel-head h1 { right: auto; left: 8px; }
   .tabs { grid-column: 2; grid-row: 1; border-top: 0; }
   .panel-body { grid-column: 2; grid-row: 2; }
@@ -290,7 +298,10 @@ details.sec[open] { padding-bottom: 4px; }
 <body>
 <noscript><p style="padding:16px;background:#000;color:#4cc38a">Bitte JavaScript aktivieren.</p></noscript>
 <div class="app">
-  <main class="stage"><canvas id="preview"></canvas><button type="button" class="stagebtn" id="stageSize" title="Vorschaugröße" aria-label="Vorschaugröße">⤢</button></main>
+  <main class="stage"><canvas id="preview"></canvas><div class="stagetools">
+    <button type="button" class="stagebtn" id="viewReset" title="Ansicht zurücksetzen" aria-label="Ansicht zurücksetzen" hidden>1×</button>
+    <button type="button" class="stagebtn" id="viewFull" title="Vorschau ohne Menü" aria-label="Vorschau ohne Menü"></button>
+  </div></main>
   <aside class="panel">
     <div class="panel-head">
       <h1>Case-Studio
@@ -361,7 +372,7 @@ const TEMPLATES = {
     sizes: [[512, '512 px'], [800, '800 px'], [1024, '1024 px'], [1600, '1600 px'], [2048, '2048 px']], size: 1024
   },
   retro: {
-    mode: 'grain', src: RETRO_SRC,
+    mode: 'grain', src: RETRO_SRC, spineBg: false,
     front: { w: 1000, h: 838 }, spine: { w: 160, h: 400 },
     quads: {
       front: [pr(374, 239), pr(1077, 239), pr(1077, 829), pr(374, 829)],
@@ -416,7 +427,7 @@ const EN = {
   'Oben links': 'Top left', 'Oben Mitte': 'Top center', 'Oben rechts': 'Top right', 'Mitte links': 'Middle left', 'Mitte rechts': 'Middle right',
   'Unten links': 'Bottom left', 'Unten Mitte': 'Bottom center', 'Unten rechts': 'Bottom right',
   'Farben für Schrift, Rahmen und Hülle.': 'Colors for text, frame and case.',
-  'Textfarbe': 'Text color', 'Konturfarbe': 'Outline color', 'Schriftkontur in % (0 = transparent)': 'Text outline in % (0 = transparent)', 'Zurücksetzen': 'Reset', 'Vorschaugröße': 'Preview size', 'Rahmenfarbe': 'Frame color', 'Hülle & Rand': 'Case & spine',
+  'Textfarbe': 'Text color', 'Konturfarbe': 'Outline color', 'Schriftkontur in % (0 = transparent)': 'Text outline in % (0 = transparent)', 'Zurücksetzen': 'Reset', 'Ansicht zurücksetzen': 'Reset view', 'Vorschau ohne Menü': 'Preview without menu',  'Rahmenfarbe': 'Frame color', 'Hülle & Rand': 'Case & spine',
   'Cover-Vorschlag (Auto-Farben)': 'Suggest colors from cover',
   'Titelbild laden': 'Load a cover image', 'Vorlage konnte nicht geladen werden': 'Template could not be loaded',
   'Vorlage wird geladen …': 'Loading template …', 'Das Bild konnte nicht gelesen werden.': 'The image could not be read.',
@@ -917,8 +928,8 @@ function paintTitle(c, stripHeight) {
   const cx = x + boxW / 2;
   const write = (text, size, baseline) => {
     c.font = fontCss(size);
-    if (!framed && outline > 0) {
-      c.lineWidth = size * .14;
+    if (outline > 0) {
+      c.lineWidth = size * (framed ? .08 : .14);
       c.strokeText(text, cx, baseline);
     }
     c.fillText(text, cx, baseline);
@@ -957,14 +968,16 @@ function buildSpine() {
   const tex = newCanvas(w, h);
   const c = tex.getContext('2d');
 
-  c.fillStyle = $('colCase').value;
-  c.fillRect(0, 0, w, h);
-  const shade = c.createLinearGradient(0, 0, w, 0);
-  shade.addColorStop(0, 'rgba(0, 0, 0, .28)');
-  shade.addColorStop(.5, 'rgba(255, 255, 255, .06)');
-  shade.addColorStop(1, 'rgba(0, 0, 0, .22)');
-  c.fillStyle = shade;
-  c.fillRect(0, 0, w, h);
+  if (cur.spineBg !== false) {   // Retro-Modul: nur Text, das Gehäuse bleibt sichtbar
+    c.fillStyle = $('colCase').value;
+    c.fillRect(0, 0, w, h);
+    const shade = c.createLinearGradient(0, 0, w, 0);
+    shade.addColorStop(0, 'rgba(0, 0, 0, .28)');
+    shade.addColorStop(.5, 'rgba(255, 255, 255, .06)');
+    shade.addColorStop(1, 'rgba(0, 0, 0, .22)');
+    c.fillStyle = shade;
+    c.fillRect(0, 0, w, h);
+  }
 
   // Freier Bereich für den Text; das Icon schiebt ihn ggf. zur Seite
   const margin = h * .04;
@@ -1125,7 +1138,19 @@ function render(target, longestSide, withHandles) {
     });
   };
 
-  if ($('layer').value === 'under') {
+  if ($('layer').value === 'under' && cur.mode === 'grain') {
+    // Vorlage zuerst, dann Bild und Text, zuletzt die Struktur nur über dem Cover
+    c.drawImage(template, 0, 0, w, h);
+    paintArt();
+    c.save();
+    c.beginPath();
+    q.front.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y));
+    c.closePath();
+    c.clip();
+    c.globalCompositeOperation = 'overlay';
+    c.drawImage(grainTemplate(w, h), 0, 0);
+    c.restore();
+  } else if ($('layer').value === 'under') {
     paintArt();
     // Außerhalb der Flächen bleibt die Vorlage unverändert ...
     c.save();
@@ -1140,12 +1165,7 @@ function render(target, longestSide, withHandles) {
     c.beginPath();
     tracePolygons();
     c.clip();
-    if (cur.mode === 'grain') {
-      c.globalCompositeOperation = 'overlay';
-      c.drawImage(grainTemplate(w, h), 0, 0);
-    } else {
-      c.drawImage(keyedTemplate(w, h), 0, 0);
-    }
+    c.drawImage(keyedTemplate(w, h), 0, 0);
     c.restore();
   } else {
     c.drawImage(template, 0, 0, w, h);
@@ -1157,9 +1177,136 @@ function render(target, longestSide, withHandles) {
 
 function redraw() {
   syncPickers();
-  canvas.style.touchAction = handlesOn() && template ? 'none' : 'auto';
-  render(canvas, Math.min(outLong(), 900), true);
+  render(canvas, Math.min(2000, Math.round(900 * Math.max(1, view.z))), true);
+  fitCanvas();
 }
+
+/* ------------------------------------------------------------------
+   Ansicht: Zoom (Doppelklick, Mausrad, Pinch), Verschieben, Vollansicht
+------------------------------------------------------------------ */
+
+const view = { z: 1, x: 0, y: 0 };
+const stageEl = document.querySelector('.stage');
+
+// Passt die Anzeigegröße an die Bühne an, unabhängig von der Rechenauflösung
+function fitCanvas() {
+  const cs = getComputedStyle(stageEl);
+  const aw = stageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const ah = stageEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  if (aw <= 0 || ah <= 0 || !canvas.width) return;
+  const k = Math.min(aw / canvas.width, ah / canvas.height);
+  canvas.style.width = Math.floor(canvas.width * k) + 'px';
+  canvas.style.height = Math.floor(canvas.height * k) + 'px';
+  applyView();
+}
+
+function applyView() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const maxX = w * view.z / 2, maxY = h * view.z / 2;
+  view.x = Math.max(-maxX, Math.min(maxX, view.x));
+  view.y = Math.max(-maxY, Math.min(maxY, view.y));
+  canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+  canvas.classList.toggle('zoomed', view.z > 1.02);
+  $('viewReset').hidden = view.z <= 1.02 && !view.x && !view.y;
+}
+
+let resTimer = 0;
+function setView(z, x, y) {
+  view.z = Math.max(1, Math.min(8, z));
+  view.x = view.z === 1 ? 0 : x;
+  view.y = view.z === 1 ? 0 : y;
+  applyView();
+  // Nach der Geste scharf neu rechnen
+  clearTimeout(resTimer);
+  resTimer = setTimeout(redraw, 160);
+}
+// Zoomt so, dass der Punkt unter dem Finger/Zeiger an Ort und Stelle bleibt
+function zoomAt(clientX, clientY, z2) {
+  const r = stageEl.getBoundingClientRect();
+  const px = clientX - (r.left + r.width / 2), py = clientY - (r.top + r.height / 2);
+  const z = view.z;
+  z2 = Math.max(1, Math.min(8, z2));
+  setView(z2, px - z2 * (px - view.x) / z, py - z2 * (py - view.y) / z);
+}
+
+const pointers = new Map();
+let gesture = null, lastTap = 0, tapMoved = false;
+canvas.addEventListener('pointerdown', e => {
+  if (dragging) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  canvas.setPointerCapture(e.pointerId);
+  tapMoved = false;
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    gesture = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: view.z, x: view.x, y: view.y, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    tapMoved = true;
+  } else {
+    gesture = { z: view.z, x: view.x, y: view.y, sx: e.clientX, sy: e.clientY };
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (dragging || !pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!gesture) return;
+  const r = stageEl.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  if (pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const z2 = Math.max(1, Math.min(8, gesture.z * d / gesture.d));
+    const m0x = gesture.mx - cx, m0y = gesture.my - cy;
+    const mx = (a.x + b.x) / 2 - cx, my = (a.y + b.y) / 2 - cy;
+    // Punkt unter den Fingern bleibt darunter, auch beim Verschieben
+    setView(z2, mx - z2 * (m0x - gesture.x) / gesture.z, my - z2 * (m0y - gesture.y) / gesture.z);
+  } else if (gesture.sx !== undefined) {
+    const dx = e.clientX - gesture.sx, dy = e.clientY - gesture.sy;
+    if (Math.hypot(dx, dy) > 6) tapMoved = true;
+    if (view.z > 1.02 && tapMoved) setView(view.z, gesture.x + dx, gesture.y + dy);
+  }
+});
+const endPointer = e => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size === 1) {
+    const [p] = [...pointers.values()];
+    gesture = { z: view.z, x: view.x, y: view.y, sx: p.x, sy: p.y };
+    tapMoved = true;
+    return;
+  }
+  if (pointers.size === 0) {
+    const tap = e.type === 'pointerup' && !tapMoved && gesture;
+    gesture = null;
+    if (tap && e.pointerType !== 'mouse') {
+      // Doppeltippen am Handy
+      const now = Date.now();
+      if (now - lastTap < 320) { toggleZoom(e.clientX, e.clientY); lastTap = 0; } else lastTap = now;
+    }
+  }
+};
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+
+function toggleZoom(x, y) {
+  if (view.z > 1.05) setView(1, 0, 0); else zoomAt(x, y, 2.6);
+}
+canvas.addEventListener('dblclick', e => toggleZoom(e.clientX, e.clientY));
+stageEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, view.z * Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)));
+}, { passive: false });
+
+$('viewReset').onclick = () => { setView(1, 0, 0); };
+const ICON_EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const ICON_CLOSE = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function setFull(on) {
+  document.querySelector('.app').classList.toggle('full', on);
+  $('viewFull').innerHTML = on ? ICON_CLOSE : ICON_EXPAND;
+  redraw();
+}
+$('viewFull').onclick = () => setFull(!document.querySelector('.app').classList.contains('full'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.app').classList.contains('full')) setFull(false); });
+$('viewFull').innerHTML = ICON_EXPAND;
+new ResizeObserver(() => fitCanvas()).observe(stageEl);
 
 /* ------------------------------------------------------------------
    Eckpunkte ziehen
@@ -1468,15 +1615,7 @@ document.querySelectorAll('.panel input:not([type=file]):not([type=range]):not(.
   el.addEventListener('change', redraw);
 });
 $('outSize').addEventListener('change', redraw);
-window.addEventListener('resize', redraw);
-
-const STAGE_H = ['30dvh', '46dvh', '18dvh'];
-let stageStep = 0;
-$('stageSize').onclick = () => {
-  stageStep = (stageStep + 1) % STAGE_H.length;
-  document.querySelector('.app').style.setProperty('--stageH', STAGE_H[stageStep]);
-  redraw();
-};
+window.addEventListener('resize', fitCanvas);
 
 function showTab(name) {
   $('pages').scrollTop = 0;
