@@ -351,7 +351,8 @@ const TEMPLATE_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAYACAYA
 // Mit  Seite.html#admin  erscheint der Tab "Admin" zum Einstellen der Eckpunkte
 const ADMIN = location.hash === '#admin';
 // Ausgabegröße: Zahl = längste Kante in px, "pm" = PortMaster-Box-Art 400 x 600 (2:3)
-const outLong = () => $('outSize').value === 'pm' ? 1600 : +$('outSize').value;
+const PRESETS = { pm: [400, 600] };   // feste Leinwandgrößen, die ganze Hülle wird eingepasst
+const outLong = () => PRESETS[$('outSize').value] ? 1600 : +$('outSize').value;
 
 // Eckpunkte der Flächen, gemessen an der jeweiligen Vorlage
 const pxOf = (w, h) => (x, y) => [x / w, y / h];
@@ -427,7 +428,7 @@ const EN = {
   'Oben links': 'Top left', 'Oben Mitte': 'Top center', 'Oben rechts': 'Top right', 'Mitte links': 'Middle left', 'Mitte rechts': 'Middle right',
   'Unten links': 'Bottom left', 'Unten Mitte': 'Bottom center', 'Unten rechts': 'Bottom right',
   'Farben für Schrift, Rahmen und Hülle.': 'Colors for text, frame and case.',
-  'Textfarbe': 'Text color', 'Konturfarbe': 'Outline color', 'Schriftkontur in % (0 = transparent)': 'Text outline in % (0 = transparent)', 'Zurücksetzen': 'Reset', 'Ansicht zurücksetzen': 'Reset view', 'Vorschau ohne Menü': 'Preview without menu',  'Rahmenfarbe': 'Frame color', 'Hülle & Rand': 'Case & spine',
+  'Textfarbe': 'Text color', 'Konturfarbe': 'Outline color', 'Rahmen-Hintergrund in % (0 = transparent)': 'Frame background in % (0 = transparent)', 'Rahmenlinie in % (0 = transparent)': 'Frame line in % (0 = transparent)', 'Schriftkontur in % (0 = transparent)': 'Text outline in % (0 = transparent)', 'Zurücksetzen': 'Reset', 'Ansicht zurücksetzen': 'Reset view', 'Vorschau ohne Menü': 'Preview without menu',  'Rahmenfarbe': 'Frame color', 'Hülle & Rand': 'Case & spine',
   'Cover-Vorschlag (Auto-Farben)': 'Suggest colors from cover',
   'Titelbild laden': 'Load a cover image', 'Vorlage konnte nicht geladen werden': 'Template could not be loaded',
   'Vorlage wird geladen …': 'Loading template …', 'Das Bild konnte nicht gelesen werden.': 'The image could not be read.',
@@ -565,6 +566,10 @@ const PAGES = {
         ${field.slider('titleSize', 'Schriftgröße in %', 50, 150, 100)}
         ${field.slider('strokeOpacity', 'Schriftkontur in % (0 = transparent)', 0, 100, 85)}
         ${field.check('titleFrame', 'Rahmen um den Titel')}
+        <div id="frameBox">
+          ${field.slider('frameBg', 'Rahmen-Hintergrund in % (0 = transparent)', 0, 100, 74)}
+          ${field.slider('frameLine', 'Rahmenlinie in % (0 = transparent)', 0, 100, 100)}
+        </div>
       </div>`)}
     ${sec('Rand', `
       ${field.check('spineOn', 'Rand bedrucken')}
@@ -908,14 +913,18 @@ function paintTitle(c, stripHeight) {
 
   if (framed) {
     const dark = $('colText').value.toLowerCase() === '#ffffff' || parseInt($('colText').value.slice(1), 16) > 0x808080;
-    c.fillStyle = dark ? 'rgba(8, 9, 12, .74)' : 'rgba(245, 245, 245, .82)';
+    const bgA = $('frameBg').value / 100, lineA = $('frameLine').value / 100;
+    c.fillStyle = dark ? `rgba(8, 9, 12, ${bgA})` : `rgba(245, 245, 245, ${bgA})`;
     rect(c, x, y, boxW, boxH, boxH * .16, 1);
+    c.save();
+    c.globalAlpha = lineA;
     c.strokeStyle = $('colAccent').value;
     c.lineWidth = 4;
     rect(c, x + 3, y + 3, boxW - 6, boxH - 6, boxH * .14);
     c.strokeStyle = 'rgba(255, 255, 255, .28)';
     c.lineWidth = 1.5;
     rect(c, x + 10, y + 10, boxW - 20, boxH - 20, boxH * .09);
+    c.restore();
   }
 
   c.textAlign = 'center';
@@ -1409,6 +1418,7 @@ function suggestColors() {
   setColor('colCase', `#${hex(r * .6)}${hex(g * .6)}${hex(b * .6)}`);
   setColor('colText', (0.299 * r + 0.587 * g + 0.114 * b) > 128 ? '#000000' : '#ffffff');
   setColor('colAccent', '#4cc38a');
+  setColor('colStroke', $('colText').value === '#ffffff' ? '#000000' : '#ffffff');   // Kontur immer im Gegensatz zur Schrift
   redraw();
 }
 $('autoColor').onclick = suggestColors;
@@ -1511,7 +1521,7 @@ function fitInto(src, W, H) {
 
 $('download').onclick = () => {
   if (!template) return;
-  const pm = $('outSize').value === 'pm';
+  const pm = PRESETS[$('outSize').value];
   const size = outLong();
   const full = newCanvas(1, 1);
   render(full, size, false);
@@ -1525,7 +1535,7 @@ $('download').onclick = () => {
     out = newCanvas(x1 - x0 + 1, y1 - y0 + 1);
     out.getContext('2d').drawImage(full, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
   }
-  if (pm) out = fitInto(out, 400, 600);
+  if (pm) out = fitInto(out, pm[0], pm[1]);
   out.toBlob(async blob => {
     if (!blob) return;
     const name = (($('title').value || 'cover').replace(/[\\/:*?"<>|]/g, '_').trim() || 'cover') + '.png';
@@ -1573,6 +1583,7 @@ function syncPickers() {
   });
   $('frontTextBox').classList.toggle('off', !$('frontTextOn').checked);
   $('spineTextBox').classList.toggle('off', !$('spineOn').checked || !$('spineTextOn').checked);
+  $('frameBox').classList.toggle('off', !$('titleFrame').checked || !$('frontTextOn').checked);
   $('titleFrame').closest('label').classList.toggle('off', !$('frontTextOn').checked);
 }
 
