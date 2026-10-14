@@ -236,7 +236,7 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .rst { width: 26px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--ink); font: 14px/1 system-ui, sans-serif; cursor: pointer; }
 .rst.dim { color: var(--muted); opacity: .45; }
 .stage { position: relative; overflow: hidden; touch-action: none; }
-canvas { touch-action: none; transform-origin: 50% 50%; will-change: transform; cursor: zoom-in; }
+canvas { touch-action: none; transform-origin: 50% 50%; will-change: transform; cursor: grab; }
 canvas.zoomed { cursor: grab; }
 .stagetools { position: absolute; right: 8px; bottom: 8px; z-index: 3; display: flex; gap: 8px; }
 .stagebtn { display: flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 17px; background: rgba(17, 21, 20, .85); color: var(--ink); font: 600 13px system-ui, sans-serif; cursor: pointer; }
@@ -299,7 +299,10 @@ details.sec[open] { padding-bottom: 4px; }
 <noscript><p style="padding:16px;background:#000;color:#4cc38a">Bitte JavaScript aktivieren.</p></noscript>
 <div class="app">
   <main class="stage"><canvas id="preview"></canvas><div class="stagetools">
-    <button type="button" class="stagebtn" id="viewReset" title="Ansicht zurücksetzen" aria-label="Ansicht zurücksetzen" hidden>1×</button>
+    <button type="button" class="stagebtn" id="zoomOut" title="Ansicht verkleinern" aria-label="Ansicht verkleinern">−</button>
+    <button type="button" class="stagebtn" id="viewReset" title="Ansicht zurücksetzen" aria-label="Ansicht zurücksetzen">62 %</button>
+    <button type="button" class="stagebtn" id="zoomIn" title="Ansicht vergrößern" aria-label="Ansicht vergrößern">+</button>
+    <button type="button" class="stagebtn" id="zoom11" title="Echte Pixelgröße (1:1)" aria-label="Echte Pixelgröße (1:1)">1:1</button>
     <button type="button" class="stagebtn" id="viewFull" title="Vorschau ohne Menü" aria-label="Vorschau ohne Menü"></button>
   </div></main>
   <aside class="panel">
@@ -312,6 +315,7 @@ details.sec[open] { padding-bottom: 4px; }
         <button class="tab" data-tab="cover" role="tab">Bild</button>
         <button class="tab" data-tab="text" role="tab">Text</button>
         <button class="tab" data-tab="icon" role="tab">Icon</button>
+        <button class="tab" data-tab="scene" role="tab">Szene</button>
         <button class="tab" data-tab="color" role="tab">Farben</button>
       </nav>
     </div>
@@ -320,10 +324,10 @@ details.sec[open] { padding-bottom: 4px; }
       <select id="outSize" aria-label="Ausgabegröße">
         <option value="512">512 px</option>
         <option value="800">800 px</option>
-        <option value="1024" selected>1024 px</option>
+        <option value="1024">1024 px</option>
         <option value="1600">1600 px</option>
         <option value="2048">2048 px</option>
-        <option value="pm">400 × 600 px (PortMaster)</option>
+        <option value="pm" selected>400 × 600 px (PortMaster)</option>
       </select>
       <label class="check"><input type="checkbox" id="outCrop" checked>Rand abschneiden</label>
       <button class="btn primary" id="download" type="button">PNG speichern</button>
@@ -432,8 +436,45 @@ const EN = {
   'Cover-Vorschlag (Auto-Farben)': 'Suggest colors from cover',
   'Titelbild laden': 'Load a cover image', 'Vorlage konnte nicht geladen werden': 'Template could not be loaded',
   'Vorlage wird geladen …': 'Loading template …', 'Das Bild konnte nicht gelesen werden.': 'The image could not be read.',
-  'Kopiert.': 'Copied.', 'Bitte nur Bilder und Logos verwenden, an denen Du die Rechte hast.': 'Please only use images and logos you have the rights to.', 'Impressum': 'Legal notice', 'Datenschutz': 'Privacy', 'Zum Kopieren markieren:': 'Select to copy:', 'Spieltitel': 'Game title'
+  'Kopiert.': 'Copied.',
+  'Design': 'Design', 'Gamepad': 'Gamepad', 'Handheld': 'Handheld',
+  'Allgemeine Handheld-Symbole, ohne Markennamen. Alle Texte sind frei änderbar.': 'Generic handheld symbols, no brand names. All texts are editable.',
+  'Rahmen ums Bild': 'Frame around image', 'Rahmenbreite in %': 'Frame width in %',
+  'Kopfbereich mit Kerbe': 'Header with notch', 'Kopfbereich anzeigen': 'Show header', 'Links groß': 'Left, large', 'Links klein': 'Left, small',
+  'Gamepad-Symbol rechts': 'Gamepad symbol on the right', 'Rechts groß': 'Right, large', 'Rechts klein': 'Right, small',
+  'Abzeichen unten rechts': 'Badge at bottom right', 'Abzeichen anzeigen': 'Show badge', 'Abzeichen groß': 'Badge, large', 'Abzeichen klein': 'Badge, small', 'Bitte nur Bilder und Logos verwenden, an denen Du die Rechte hast.': 'Please only use images and logos you have the rights to.', 'Impressum': 'Legal notice', 'Datenschutz': 'Privacy', 'Zum Kopieren markieren:': 'Select to copy:', 'Spieltitel': 'Game title'
 };
+
+Object.assign(EN, {
+  'Szene': 'Scene',
+  'Gameplay-Bild als Hintergrund, die Hülle klein davor. Dein Titelbild lädst Du weiterhin im Tab „Bild“ hoch.': 'Gameplay image as background with the case in front. You still upload your cover image in the “Image” tab.',
+  'Szene aktivieren': 'Enable scene', 'Gameplay-Bild': 'Gameplay image', 'Gameplay-Bild ablegen oder antippen': 'Drop a gameplay image or tap to choose',
+  'Weichzeichnen': 'Blur', 'Abdunkeln in %': 'Darken in %', 'Vignette in %': 'Vignette in %',
+  'Hülle im Vordergrund': 'Case in the foreground', 'Hüllengröße (% der Bildhöhe)': 'Case size (% of image height)', 'Position': 'Position',
+  'Abstand zum Rand': 'Distance from edge', 'Neigung in °': 'Tilt in °', 'Schatten': 'Shadow', 'Leuchten in Rahmenfarbe': 'Glow in frame color',
+  'Format und Rahmen': 'Format and frame', 'Format': 'Format', 'Rahmenstil': 'Frame style',
+  'Klassisch mit Ecken': 'Classic with corners', 'Neon-Leuchtrahmen': 'Neon glow frame', 'Arcade-Leiste': 'Arcade bar', 'Filmstreifen': 'Film strip',
+  'Passepartout': 'Mat board', 'Feine Linie': 'Fine line', 'Ohne Rahmen': 'No frame', 'Rahmenbreite': 'Frame width',
+  'Farben des Rahmens stellst Du im Tab „Farben“ ein (Rahmenfarbe und Hülle & Rand).': 'Set the frame colors in the “Colors” tab (frame color and case & edge).',
+  'Oben links': 'Top left', 'Oben Mitte': 'Top center', 'Oben rechts': 'Top right', 'Mitte links': 'Middle left', 'Mitte': 'Middle', 'Mitte rechts': 'Middle right',
+  'Unten links': 'Bottom left', 'Unten Mitte': 'Bottom center', 'Unten rechts': 'Bottom right'
+});
+Object.assign(EN, {
+  'Gameplay-Bild als Hintergrund, die Hülle klein davor. Wähle einen Rahmenstil: Glitch-Stile lösen den Rand des Gameplay-Bilds in Teile auf, der Rest wird durchsichtig. Dein Titelbild lädst Du im Tab „Bild“ hoch.': 'Gameplay image as background with the case in front. Pick a frame style: glitch styles break the edge of the gameplay image into pieces, the rest becomes transparent. You upload your cover image in the “Image” tab.',
+  'Glitch (Rand zerfällt, Rest durchsichtig)': 'Glitch (edge breaks up, rest transparent)', 'Klassisch': 'Classic', 'Zerfall an Seite': 'Break-up side', 'Alle Seiten': 'All sides', 'Breite des Zerfalls in %': 'Break-up width in %', 'Glitch-Zerfall': 'Glitch break-up', 'Rahmenbreite (klassisch)': 'Frame width (classic)',
+  'Rahmen / Fragmente': 'Frame / fragments', 'Glitch-Blöcke': 'Glitch blocks', 'Pixel-Zerfall': 'Pixel decay', 'Daten-Streifen': 'Data stripes', 'HUD-Fenster': 'HUD windows', 'Scherben': 'Shards', 'Weiche Kante': 'Soft edge',
+  'Reichweite nach rechts in %': 'Reach to the right in %', 'Menge der Teile in %': 'Amount of pieces in %', 'Teilegröße': 'Piece size', 'Glitch-Stärke in %': 'Glitch strength in %',
+  'Freier Rand oben in %': 'Clear margin at top in %', 'Scanlines auf den Teilen': 'Scanlines on pieces', 'Zufallswert': 'Random seed', 'Neu mischen': 'Shuffle',
+  'Hüllengröße (% der Breite)': 'Case size (% of width)', 'Schatten auf den Teilen': 'Shadow on pieces', 'Leuchten in Rahmenfarbe': 'Glow in frame color',
+  'Format (bei „640 × 480 px“ usw. immer 4:3)': 'Format (always 2:3 at “400 × 600 px”)', 'Hülle schärfen (kleine Ausgabe)': 'Sharpen for small output',
+  'Farben der Teile stellst Du im Tab „Farben“ ein (Rahmenfarbe).': 'Set the piece colors in the “Colors” tab (frame color).',
+  'Ansicht verkleinern': 'Zoom out', 'Ansicht vergrößern': 'Zoom in', 'Echte Pixelgröße (1:1)': 'Actual pixel size (1:1)', 'Ansicht zurücksetzen': 'Reset view'
+});
+Object.assign(EN, {
+  'PortMaster-Screenshot (4:3)': 'PortMaster screenshot (4:3)', 'Größe': 'Size', 'Bild einpassen': 'Fit image', 'Mit Balken': 'With bars', 'Zuschneiden': 'Crop',
+  'PortMaster: Screenshot im Format 4:3, mindestens 640 × 480 px, gespeichert als screenshot.png. Nutzt das Gameplay-Bild von oben, ohne Hülle und ohne Effekte.': 'PortMaster: screenshot in 4:3, at least 640 × 480 px, saved as screenshot.png. Uses the gameplay image from above, without case or effects.',
+  'Screenshot in der Vorschau zeigen': 'Show screenshot in preview', 'Bitte zuerst ein Gameplay-Bild laden.': 'Please load a gameplay image first.', 'screenshot.png speichern': 'Save screenshot.png', '640 × 480 px (Minimum)': '640 × 480 px (minimum)'
+});
 const DEFAULT_TITLES = ['Spieltitel', 'Game title'];
 let lang = 'en';   // Beim Laden zuerst Englisch, per DE/EN umschaltbar
 const tr = s => lang === 'en' ? (EN[s] || s) : s;
@@ -485,6 +526,7 @@ let quads = null;
 let dragging = null;
 let templateError = false;
 let coverAvg = null;      // Durchschnittsfarbe des Titelbilds
+let gameplay = null;       // Gameplay-Bild für die Szene
 const customIcons = {};
 
 function cloneQuads(q) { return JSON.parse(JSON.stringify(q)); }
@@ -525,7 +567,7 @@ const field = {
 
 // Einklappbarer Abschnitt (spart am Handy Platz)
 const sec = (title, body, open = true, needs = '') =>
-  `<details class="sec"${open ? ' open' : ''}${needs ? ` data-needs="${needs}"` : ''}><summary>${title}</summary>${body}</details>`;
+  `<details class="sec"${needs ? ` data-needs="${needs}"` : ''}><summary>${title}</summary>${body}</details>`;
 
 const PAGES = {
   template: `
@@ -541,16 +583,13 @@ const PAGES = {
 
   cover: `
     ${sec('Hülle', field.pick('tpl', '', [['case', 'Spielehülle'], ['retro', 'Retro-Modul']], 'case'))}
-    <p class="note">Starte hier: Lade Dein Titelbild hoch und passe es an.</p>
     <label class="drop" id="drop" tabindex="0">Titelbild ablegen oder antippen<input type="file" id="coverFile" accept="image/*"></label>
     ${field.slider('zoom', 'Größe in %', 20, 300, 100)}
     ${field.slider('shiftX', 'Waagerecht verschieben', -200, 200, 0)}
     ${field.slider('shiftY', 'Senkrecht verschieben', -200, 200, 0)}
-    <p class="note">Doppelklick oder Doppeltippen auf einen Regler setzt ihn zurück.</p>
     ${field.pick('fillMode', 'Leerer Rand bei verkleinertem Bild', [['blur', 'Unscharf'], ['black', 'Schwarz'], ['case', 'Hüllenfarbe']], 'blur')}`,
 
   text: `
-    <p class="note">Front- und Randtext haben dieselbe Schrift und lassen sich einzeln abwählen.</p>
     ${sec('Schrift', `
       <div class="field"><select id="font" aria-label="Schrift"></select></div>
       ${field.button('fontLoad', 'Eigene Schriftdatei laden (.ttf, .otf)')}
@@ -582,7 +621,6 @@ const PAGES = {
       </div>`, true, 'spine')}`,
 
   icon: `
-    <p class="note">Lade Dein eigenes Logo hoch. Mit Mischmodus und Cover-Farbe fügt es sich natürlicher ins Bild ein.</p>
     <div class="field"><label for="iconId">Icon</label><select id="iconId"></select></div>
     ${field.button('iconLoad', 'Eigenes Logo laden (PNG, SVG)')}
     <input type="file" id="iconFile" accept="image/*">
@@ -597,7 +635,6 @@ const PAGES = {
           <option value="screen">Aufhellen</option>
         </select>
       </div>
-      <p class="note">Tipp: „Überlagern“ oder „Weiches Licht“ lassen das Icon mit dem Bild verschmelzen.</p>
       ${field.slider('iconMix', 'Cover-Farbe einmischen in %', 0, 100, 0)}
       ${field.pick('iconTint', 'Farbe', [['orig', 'Original'], ['white', 'Weiß'], ['black', 'Schwarz']], 'orig')}`, false)}
     ${sec('Auf der Front', `
@@ -611,8 +648,88 @@ const PAGES = {
       ${field.pick('spineIconPos', 'Position', [['t', 'Oben'], ['m', 'Mitte'], ['b', 'Unten']], 't')}
       ${field.slider('spineIconSize', 'Größe in %', 30, 150, 100)}`, true, 'spine')}`,
 
+  design: `
+    ${sec('Rahmen ums Bild', field.slider('bezel', 'Rahmenbreite in %', 0, 12, 0))}
+    ${sec('Kopfbereich mit Kerbe', `
+      ${field.check('hdrOn', 'Kopfbereich anzeigen', false)}
+      <div id="hdrBox">
+        ${field.text('hdrLTitle', 'Links groß', 'HANDHELD')}
+        ${field.text('hdrLSub', 'Links klein', 'GAME CONSOLE')}
+        ${field.check('hdrIcon', 'Gamepad-Symbol rechts')}
+        ${field.text('hdrRTitle', 'Rechts groß', 'GAME')}
+        ${field.text('hdrRSub', 'Rechts klein', 'READY')}
+      </div>`)}
+    ${sec('Abzeichen unten rechts', `
+      ${field.check('ftrOn', 'Abzeichen anzeigen', false)}
+      <div id="ftrBox">
+        ${field.text('ftrTitle', 'Abzeichen groß', 'HANDHELD')}
+        ${field.text('ftrSub', 'Abzeichen klein', 'OPTIMIZED FOR HANDHELD GAMING')}
+      </div>`)}`,
+
+  scene: `
+    ${field.check('scOn', 'Szene aktivieren', false)}
+    <div id="sceneBox">
+    ${sec('Gameplay-Bild', `
+      <label class="drop" id="dropGp" tabindex="0">Gameplay-Bild ablegen oder antippen<input type="file" id="gpFile" accept="image/*"></label>
+      ${field.slider('gpZoom', 'Größe in %', 10, 300, 100)}
+      ${field.slider('gpX', 'Waagerecht verschieben', -100, 100, 0)}
+      ${field.slider('gpY', 'Senkrecht verschieben', -100, 100, 0)}
+      ${field.slider('gpBlur', 'Weichzeichnen', 0, 40, 0)}
+      ${field.slider('gpDark', 'Abdunkeln in %', 0, 80, 20)}`)}
+    ${sec('Hülle im Vordergrund', `
+      ${field.slider('scSize', 'Hüllengröße (% der Bildhöhe)', 25, 100, 78)}
+      ${field.pick('scPos', 'Position', POSITIONS, 'bl', 'grid3')}
+      ${field.slider('scMargin', 'Abstand zum Rand', 0, 15, 3)}
+      ${field.slider('scShadow', 'Schatten', 0, 100, 60)}
+      ${field.slider('scGlow', 'Leuchten in Rahmenfarbe', 0, 100, 8)}`)}
+    ${sec('Rahmenstil', `
+      <div class="field"><label for="scFrame">Stil</label>
+        <select id="scFrame">
+          <optgroup label="Glitch (Rand zerfällt, Rest durchsichtig)">
+            <option value="blocks">Glitch-Blöcke</option>
+            <option value="pixels">Pixel-Zerfall</option>
+            <option value="bars">Daten-Streifen</option>
+            <option value="hud">HUD-Fenster</option>
+            <option value="shards">Scherben</option>
+          </optgroup>
+          <optgroup label="Klassisch">
+            <option value="double">Klassisch mit Ecken</option>
+            <option value="neon">Neon-Leuchtrahmen</option>
+            <option value="arcade">Arcade-Leiste</option>
+            <option value="film">Filmstreifen</option>
+            <option value="matte">Passepartout</option>
+            <option value="line">Feine Linie</option>
+            <option value="none" selected>Ohne Rahmen</option>
+          </optgroup>
+        </select>
+      </div>
+      ${field.slider('scFrameW', 'Rahmenbreite (klassisch)', 1, 12, 6)}`)}
+    ${sec('Glitch-Zerfall', `
+      <div class="field"><label for="scSide">Zerfall an Seite</label>
+        <select id="scSide">
+          <option value="right">Rechts</option>
+          <option value="left">Links</option>
+          <option value="top">Oben</option>
+          <option value="bottom">Unten</option>
+          <option value="all">Alle Seiten</option>
+        </select>
+      </div>
+      ${field.slider('scReach', 'Breite des Zerfalls in %', 10, 100, 55)}
+      ${field.slider('scDens', 'Menge der Teile in %', 10, 100, 70)}
+      ${field.slider('scCell', 'Teilegröße', 1, 10, 5)}
+      ${field.slider('scGlitch', 'Glitch-Stärke in %', 0, 100, 50)}
+      ${field.check('scLines', 'Scanlines auf den Teilen', true)}
+      ${field.button('scShuffle', 'Neu mischen')}`)}
+    ${sec('Weiche Kante', `
+      ${field.check('softAll', 'Alle Seiten', false)}
+      ${field.check('softL', 'Links', false)}
+      ${field.check('softR', 'Rechts', false)}
+      ${field.check('softT', 'Oben', false)}
+      ${field.check('softB', 'Unten', false)}
+      ${field.slider('softW', 'Breite in %', 2, 50, 12)}`)}
+    </div>`,
+
   color: `
-    <p class="note">Farben für Schrift, Rahmen und Hülle.</p>
     ${field.color('colText', 'Textfarbe', '#ffffff')}
     ${field.color('colStroke', 'Konturfarbe', '#000000')}
     ${field.color('colAccent', 'Rahmenfarbe', '#4cc38a')}
@@ -643,6 +760,18 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
   };
 }
 
+// Allgemeine Handheld-Symbole ohne Markenbezug, als Linien gezeichnet (Mittelpunkt im Ursprung)
+function drawPad(c, size, color) {
+  const u = size / 100;
+  c.save();
+  c.strokeStyle = color;
+  c.lineWidth = size * .07;
+  c.lineCap = c.lineJoin = 'round';
+  c.beginPath(); c.roundRect(-48 * u, -26 * u, 96 * u, 52 * u, 26 * u); c.stroke();
+  c.beginPath(); c.moveTo(-34 * u, 0); c.lineTo(-14 * u, 0); c.moveTo(-24 * u, -10 * u); c.lineTo(-24 * u, 10 * u); c.stroke();
+  [[26, 7], [38, -6]].forEach(([x, y]) => { c.beginPath(); c.arc(x * u, y * u, 5.5 * u, 0, Math.PI * 2); c.stroke(); });
+  c.restore();
+}
 // Zeichnet ein hochgeladenes Icon mittig im Ursprung; "size" ist die längste Kante in Pixeln
 function paintIcon(c, id, size) {
   const img = customIcons[id];
@@ -962,12 +1091,109 @@ function paintFrontIcon(c, stripHeight) {
   placeIcon(c, x, y, size);
 }
 
+// Schwarzer Rahmen um das Bild (Farbe: Hülle & Rand)
+function paintBezel(c) {
+  const { w, h } = FRONT;
+  const bw = w * $('bezel').value / 100;
+  if (bw < 1) return;
+  c.save();
+  c.fillStyle = $('colCase').value;
+  c.beginPath();
+  c.rect(0, 0, w, h);
+  c.roundRect(bw, bw, w - 2 * bw, h - 2 * bw, w * .03);
+  c.fill('evenodd');
+  c.restore();
+}
+
+// Kopfbereich mit Kerbe in der Mitte, links großer Text, rechts Symbol mit Text
+function paintHeader(c) {
+  if (!$('hdrOn').checked) return 0;
+  const { w, h } = FRONT;
+  const bh = Math.min(h * .11, w * .14);
+  const r = bh * .3, rr = bh * .16, slope = bh * .34, ny = bh * .2;
+  const nx1 = w * .37, nx2 = w * .63;
+  const A = [nx2 + slope, bh], B = [nx2, ny], C = [nx1, ny], D = [nx1 - slope, bh];
+  c.save();
+  c.beginPath();
+  c.moveTo(0, 0); c.lineTo(w, 0); c.lineTo(w, bh - r);
+  c.arcTo(w, bh, w - r, bh, r);
+  c.arcTo(A[0], A[1], B[0], B[1], rr);
+  c.arcTo(B[0], B[1], C[0], C[1], rr);
+  c.arcTo(C[0], C[1], D[0], D[1], rr);
+  c.arcTo(D[0], D[1], r, bh, rr);
+  c.arcTo(0, bh, 0, bh - r, r);
+  c.closePath();
+  c.fillStyle = $('colCase').value;
+  c.fill();
+  c.strokeStyle = 'rgba(255, 255, 255, .16)';
+  c.lineWidth = Math.max(1.5, w * .002);
+  c.stroke();
+
+  const col = $('colText').value;
+  c.fillStyle = col;
+  c.textAlign = 'left';
+  c.textBaseline = 'alphabetic';
+  const lt = $('hdrLTitle').value, ls = $('hdrLSub').value;
+  const lx = w * .045, lw = D[0] - lx - w * .03;
+  if (lt) { fitFont(c, lt, lw, bh * .46); c.fillText(lt, lx, bh * .5); }
+  if (ls) { const ss = fitFont(c, ls, lw, bh * .17); c.fillText(ls, lx, bh * (lt ? .5 : .35) + ss * 1.5); }
+
+  const rt = $('hdrRTitle').value, rs = $('hdrRSub').value;
+  const rStart = A[0] + w * .03, rEnd = w - w * .045;
+  let tx = rStart;
+  if ($('hdrIcon').checked) {
+    const isz = bh * .56;
+    c.save();
+    c.translate(rStart + isz * .62, bh * .45);
+    drawPad(c, isz, col);
+    c.restore();
+    tx = rStart + isz * 1.35;
+  }
+  if (rt) { fitFont(c, rt, rEnd - tx, bh * .3); c.fillText(rt, tx, bh * .45); }
+  if (rs) { const ss = fitFont(c, rs, rEnd - tx, bh * .15); c.fillText(rs, tx, bh * .45 + ss * 1.7); }
+  c.restore();
+  return bh;
+}
+
+// Abzeichen unten rechts mit Handheld-Symbol und zwei Textzeilen
+function paintFooter(c) {
+  if (!$('ftrOn').checked) return;
+  const { w, h } = FRONT;
+  const m = w * .045 + w * $('bezel').value / 100;
+  const bw = w * .46, bh = w * .12;
+  const x = w - m - bw, y = h - m - bh;
+  c.save();
+  c.fillStyle = $('colCase').value;
+  rect(c, x, y, bw, bh, bh * .22, 1);
+  c.strokeStyle = 'rgba(255, 255, 255, .2)';
+  c.lineWidth = 2;
+  rect(c, x + 1, y + 1, bw - 2, bh - 2, bh * .22);
+  const col = $('colText').value;
+  c.save();
+  c.translate(x + bh * .5, y + bh / 2);
+  drawHandheld(c, bh * .66, col);
+  c.restore();
+  c.strokeStyle = 'rgba(255, 255, 255, .25)';
+  c.lineWidth = 2;
+  c.beginPath(); c.moveTo(x + bh * .98, y + bh * .2); c.lineTo(x + bh * .98, y + bh * .8); c.stroke();
+  c.fillStyle = col;
+  c.textAlign = 'left';
+  c.textBaseline = 'alphabetic';
+  const tx = x + bh * 1.15, tw = x + bw - bh * .2 - tx;
+  const ft = $('ftrTitle').value, fs = $('ftrSub').value;
+  if (ft) { fitFont(c, ft, tw, bh * .36); c.fillText(ft, tx, y + bh * (fs ? .5 : .62)); }
+  if (fs) { const ss = fitFont(c, fs, tw, bh * .15); c.fillText(fs, tx, y + bh * .5 + ss * 1.8); }
+  c.restore();
+}
+
 function buildFront() {
   const tex = newCanvas(FRONT.w, FRONT.h);
   const c = tex.getContext('2d');
   paintCover(c);
-  const stripHeight = paintStrip(c);
+  paintBezel(c);
+  const stripHeight = Math.max(paintStrip(c), paintHeader(c), FRONT.w * $('bezel').value / 100);
   if ($('frontTextOn').checked) paintTitle(c, stripHeight);
+  paintFooter(c);
   paintFrontIcon(c, stripHeight);   // zuletzt, damit das Icon immer im Vordergrund liegt
   return tex;
 }
@@ -1113,7 +1339,7 @@ function applyTemplate(id) {
    Rendern
 ------------------------------------------------------------------ */
 
-function render(target, longestSide, withHandles) {
+function renderCase(target, longestSide, withHandles) {
   const c = target.getContext('2d');
   if (!template) {
     target.width = 640;
@@ -1184,9 +1410,459 @@ function render(target, longestSide, withHandles) {
   if (withHandles && handlesOn()) drawHandles(c, q);
 }
 
+/* ------------------------------------------------------------------
+   Szene: Gameplay-Bild als Hintergrund, Hülle klein im Vordergrund, Rahmen
+------------------------------------------------------------------ */
+
+const SCENE_RATIOS = { '2:3': [2, 3], '3:4': [3, 4], '4:3': [4, 3], '3:2': [3, 2], '1:1': [1, 1], '16:9': [16, 9] };
+
+// Feste Ausgabegröße: PortMaster = exakt 400 x 600 px, Zufall und Raster sind größenunabhängig
+const isSceneSize = v => /^s\d+$/.test(v);
+const sceneRatioKey = () => '4:3';
+
+function render(target, longestSide, withHandles, preview) {
+  if (!template || !$('scOn').checked) return renderCase(target, longestSide, withHandles);
+  renderScene(target, isSceneSize($('outSize').value) && !preview ? +$('outSize').value.slice(1) : longestSide);
+}
+
+let sceneSeed = 7;
+function mulberry(a) {
+  return () => {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const hexA = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+};
+
+// Verkleinert in Halbschritten (scharf, ohne Treppen) auf genaue Pixelgröße
+function downTo(src, w, h) {
+  let step = src;
+  while (step.width / 2 >= w && step.height / 2 >= h) {
+    const n = newCanvas(Math.round(step.width / 2), Math.round(step.height / 2));
+    const nc = n.getContext('2d');
+    nc.imageSmoothingQuality = 'high';
+    nc.drawImage(step, 0, 0, n.width, n.height);
+    step = n;
+  }
+  const out = newCanvas(w, h), oc = out.getContext('2d');
+  oc.imageSmoothingQuality = 'high';
+  oc.drawImage(step, 0, 0, w, h);
+  return out;
+}
+
+// Leichtes Nachschärfen für kleine Ausgaben (Alpha bleibt unberührt, keine dunklen Ränder)
+function sharpen(cv, amount) {
+  const c = cv.getContext('2d'), w = cv.width, h = cv.height;
+  const img = c.getImageData(0, 0, w, h), s = img.data, o = new Uint8ClampedArray(s);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = (y * w + x) * 4;
+    if (s[i + 3] < 8) continue;
+    for (let k = 0; k < 3; k++) {
+      let sum = 0;
+      for (const j of [i - 4, i + 4, i - w * 4, i + w * 4]) sum += s[j + 3] < 8 ? s[i + k] : s[j + k];
+      o[i + k] = s[i + k] + amount * (s[i + k] * 4 - sum);
+    }
+  }
+  img.data.set(o);
+  c.putImageData(img, 0, 0);
+}
+
+// Welche Teile entstehen? Form, Größen und Dichte je Stil. cx/cy = Zellmaß relativ zur Zellgröße
+const FRAG_STYLES = {
+  blocks: { cx: 1, cy: 1, dens: 1, shapes: [[1, 1, 3], [2, 1, 3], [3, 1, 2], [2, 2, 2], [4, 1, 1], [1, 2, 1], [3, 2, 1]] },
+  pixels: { cx: .55, cy: .55, dens: 1.1, shapes: [[1, 1, 12], [2, 2, 1], [2, 1, 1]] },
+  bars:   { cx: 1, cy: .42, dens: .9, shapes: [[3, 1, 2], [5, 1, 3], [8, 1, 2], [12, 1, 1], [2, 1, 2]] },
+  hud:    { cx: 1.15, cy: 1.15, dens: .6, shapes: [[3, 2, 3], [4, 3, 2], [2, 2, 2], [5, 2, 1], [3, 3, 1], [2, 1, 1]] },
+  shards: { cx: 1, cy: 1, dens: .85, shapes: [[2, 2, 2], [3, 2, 2], [2, 3, 1], [4, 2, 1], [1, 1, 2]] }
+};
+
+function makeTiles(st, cols, rows, dens, rng) {
+  const used = new Uint8Array(cols * rows), order = [];
+  for (let n = 0; n < cols * rows; n++) order.push(n);
+  for (let n = order.length - 1; n > 0; n--) { const m = Math.floor(rng() * (n + 1)); [order[n], order[m]] = [order[m], order[n]]; }
+  const total = st.shapes.reduce((a, s) => a + s[2], 0), tiles = [];
+  for (const idx of order) {
+    if (used[idx]) continue;
+    const i = idx % cols, j = Math.floor(idx / cols), d = dens(i, j);
+    if (rng() > d) continue;
+    let pick = rng() * total, shape = st.shapes[0];
+    for (const s of st.shapes) { pick -= s[2]; if (pick <= 0) { shape = s; break; } }
+    let [w, h] = shape;
+    if (d < .4 && w * h > 2) { w = Math.min(w, 2); h = 1; }
+    if (rng() < .5 && w !== h && h <= 2 && w <= 2) [w, h] = [h, w];
+    const fits = (ww, hh) => {
+      if (i + ww > cols || j + hh > rows) return false;
+      for (let y = 0; y < hh; y++) for (let x = 0; x < ww; x++) if (used[(j + y) * cols + i + x]) return false;
+      return true;
+    };
+    if (!fits(w, h)) { w = 1; h = 1; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) used[(j + y) * cols + i + x] = 1;
+    tiles.push({ i, j, w, h, r: rng(), r2: rng(), r3: rng() });
+  }
+  return tiles;
+}
+
+// Gameplay-Bild in Fragmente auflösen: Innenfläche bleibt ganz, zu den gewählten Seiten zerfällt der Rand
+function fragmentLayer(src, W, H, o) {
+  const frag = newCanvas(W, H), f = frag.getContext('2d');
+  const { style, accent, glitch, px, sides } = o;
+  const rng = mulberry(o.seed * 7919 + 13);
+  const Z = Math.max(px * 6, o.reach * Math.min(W, H) * (sides === 'all' ? .5 : .75));   // Breite der Zerfallszone
+  const L = sides === 'left' || sides === 'all', R = sides === 'right' || sides === 'all';
+  const T = sides === 'top' || sides === 'all', B = sides === 'bottom' || sides === 'all';
+  const ix0 = L ? Z : 0, ix1 = W - (R ? Z : 0), iy0 = T ? Z : 0, iy1 = H - (B ? Z : 0);
+  // Tiefe: 0 am Bildrand, 1 am inneren Ende der Zone
+  const depth = (x, y) => Math.min(L ? x / Z : 9, R ? (W - x) / Z : 9, T ? y / Z : 9, B ? (H - y) / Z : 9);
+
+  const st = FRAG_STYLES[style] || FRAG_STYLES.blocks;
+  const cellBase = W * (.012 + o.cell * .0064), cellX = cellBase * st.cx, cellY = cellBase * st.cy;
+  const cols = Math.ceil(W / cellX), rows = Math.ceil(H / cellY);
+  const dens = (i, j) => {
+    const u = depth((i + .5) * cellX, (j + .5) * cellY);
+    if (u >= 1) return 1;
+    return Math.min(1, Math.pow(smooth(0, 1, u), 1.15) * (.35 + o.dens * .9) * st.dens * 1.15);
+  };
+  // Innenfläche bis über die Rasterzellen hinaus, sonst bleibt vor dem Zerfall ein leerer Streifen
+  const ex0 = Math.max(0, Math.floor(ix0 - (L ? cellX : 0))), ex1 = Math.min(W, Math.ceil(ix1 + (R ? cellX : 0)));
+  const ey0 = Math.max(0, Math.floor(iy0 - (T ? cellY : 0))), ey1 = Math.min(H, Math.ceil(iy1 + (B ? cellY : 0)));
+  f.drawImage(src, ex0, ey0, ex1 - ex0, ey1 - ey0, ex0, ey0, ex1 - ex0, ey1 - ey0);
+  const tiles = makeTiles(st, cols, rows, (i, j) => depth((i + .5) * cellX, (j + .5) * cellY) >= 1 ? 0 : dens(i, j), rng);
+  const snap = Math.round;
+  for (const t of tiles) {
+    const x0 = snap(t.i * cellX), x1 = Math.min(W, snap((t.i + t.w) * cellX));
+    const y0 = snap(t.j * cellY), y1 = Math.min(H, snap((t.j + t.h) * cellY));
+    const w = x1 - x0, h = y1 - y0;
+    if (w <= 0 || h <= 0) continue;
+    const hot = t.r < .18 + glitch * .35;
+    if (style === 'pixels' && t.r2 < .07) { f.fillStyle = t.r3 < .6 ? accent : '#ffffff'; f.fillRect(x0, y0, w, h); continue; }
+    if (style === 'hud' && t.r3 < .28) {
+      f.fillStyle = hexA(accent, .10); f.fillRect(x0, y0, w, h);
+    } else if (style === 'shards') {
+      f.save(); f.beginPath();
+      const sk = Math.min(w, h) * (.4 + t.r2 * .6) * (t.r3 < .5 ? 1 : -1);
+      if (t.r < .35) { f.moveTo(x0, y0); f.lineTo(x1, y0); f.lineTo(x0, y1); }
+      else if (t.r < .7) { f.moveTo(x1, y0); f.lineTo(x1, y1); f.lineTo(x0, y1); }
+      else { f.moveTo(x0 + Math.max(0, sk), y0); f.lineTo(x1, y0); f.lineTo(x1 - Math.max(0, -sk), y1); f.lineTo(x0, y1); }
+      f.closePath(); f.clip();
+      f.drawImage(src, x0, y0, w, h, x0, y0, w, h);
+      f.restore();
+    } else {
+      const shift = hot ? Math.round((t.r2 - .5) * cellX * (1 + glitch * 4)) : 0;
+      f.drawImage(src, x0 + shift, y0, w, h, x0, y0, w, h);
+    }
+    if (style === 'blocks' || style === 'bars') {
+      if (hot && w > px * 4) {
+        f.fillStyle = hexA(accent, .9); f.fillRect(x0, y0, px, h);
+        f.fillStyle = 'rgba(255,255,255,.75)'; f.fillRect(x1 - px, y0, px, h);
+      }
+      if (style === 'bars' && t.r3 < .3 + glitch * .3) {
+        f.fillStyle = hexA(accent, .7);
+        const len = Math.round(cellX * (1 + t.r2 * 5));
+        if (R && x1 > W - Z) f.fillRect(x1, y0 + Math.floor(h / 2), len, px);
+        else if (L && x0 < Z) f.fillRect(x0 - len, y0 + Math.floor(h / 2), len, px);
+      }
+    }
+    if (style === 'hud') {
+      f.strokeStyle = hexA(accent, .55); f.lineWidth = px;
+      f.strokeRect(x0 + px / 2, y0 + px / 2, w - px, h - px);
+      const Lc = Math.max(px * 3, Math.min(w, h) * .38);
+      f.strokeStyle = accent; f.lineWidth = px * 2;
+      f.beginPath();
+      f.moveTo(x0 + px, y0 + Lc); f.lineTo(x0 + px, y0 + px); f.lineTo(x0 + Lc, y0 + px);
+      f.moveTo(x1 - px, y1 - Lc); f.lineTo(x1 - px, y1 - px); f.lineTo(x1 - Lc, y1 - px);
+      f.stroke();
+    }
+  }
+  if (o.lines) {   // Scanlines nur auf der Zerfallszone
+    const z = newCanvas(W, H), zc = z.getContext('2d');
+    zc.fillStyle = 'rgba(0,0,0,.18)';
+    for (let y = 0; y < H; y += px * 2) zc.fillRect(0, y, W, px);
+    zc.globalCompositeOperation = 'destination-out';
+    zc.fillStyle = '#000'; zc.fillRect(ix0, iy0, ix1 - ix0, iy1 - iy0);
+    f.globalCompositeOperation = 'source-atop';
+    f.drawImage(z, 0, 0);
+    f.globalCompositeOperation = 'source-over';
+  }
+  return frag;
+}
+
+// Wie viel Platz der Rahmen innen verbraucht (x = links/rechts, y = oben/unten)
+function frameInset(style, b) {
+  switch (style) {
+    case 'line': return { x: b * 1.3, y: b * 1.3 };
+    case 'double': return { x: b * 2.1, y: b * 2.1 };
+    case 'neon': return { x: b * 1.7, y: b * 1.7 };
+    case 'arcade': return { x: b * 1.9, y: b * 1.9 };
+    case 'film': return { x: b * 0.9, y: b * 2.3 };
+    case 'matte': return { x: b * 2.4, y: b * 2.4 };
+    default: return { x: 0, y: 0 };
+  }
+}
+
+// Löcher-Rahmen: äußeres Rechteck minus inneres, per evenodd gefüllt
+function fillBand(c, W, H, x, y, fill) {
+  c.save();
+  c.beginPath();
+  c.rect(0, 0, W, H);
+  c.rect(x, y, W - 2 * x, H - 2 * y);
+  c.fillStyle = fill;
+  c.fill('evenodd');
+  c.restore();
+}
+
+function diamond(c, x, y, r, fill) {
+  c.beginPath();
+  c.moveTo(x, y - r); c.lineTo(x + r, y); c.lineTo(x, y + r); c.lineTo(x - r, y);
+  c.closePath();
+  c.fillStyle = fill;
+  c.fill();
+}
+
+function drawFrame(c, W, H, style, b, accent, base) {
+  if (style === 'none') return;
+  const lw = Math.max(1, b * .16);
+  c.save();
+  if (style === 'line') {
+    c.strokeStyle = accent; c.lineWidth = lw * 1.4;
+    c.strokeRect(b * .6, b * .6, W - b * 1.2, H - b * 1.2);
+    c.globalAlpha = .55; c.lineWidth = Math.max(1, lw * .5);
+    c.strokeRect(b * 1.0, b * 1.0, W - b * 2.0, H - b * 2.0);
+  } else if (style === 'double') {
+    const band = b * 1.5;
+    fillBand(c, W, H, band, band, base);
+    c.strokeStyle = accent; c.lineWidth = lw;
+    c.strokeRect(band, band, W - 2 * band, H - 2 * band);
+    c.lineWidth = Math.max(1, lw * .45);
+    c.globalAlpha = .7;
+    c.strokeRect(band * .55, band * .55, W - band * 1.1, H - band * 1.1);
+    c.globalAlpha = 1;
+    // Ecken- und Mittelornamente
+    const r = b * .5;
+    [[band * .55, band * .55], [W - band * .55, band * .55], [band * .55, H - band * .55], [W - band * .55, H - band * .55]]
+      .forEach(([x, y]) => diamond(c, x, y, r, accent));
+    [[W / 2, band * .55], [W / 2, H - band * .55]].forEach(([x, y]) => diamond(c, x, y, r * .7, accent));
+    [[band * .55, H / 2], [W - band * .55, H / 2]].forEach(([x, y]) => diamond(c, x, y, r * .7, accent));
+    // Innere Eckwinkel
+    const L = b * 2.2;
+    c.strokeStyle = accent; c.lineWidth = lw * 1.6; c.lineCap = 'square';
+    [[band + lw * 2.5, band + lw * 2.5, 1, 1], [W - band - lw * 2.5, band + lw * 2.5, -1, 1],
+     [band + lw * 2.5, H - band - lw * 2.5, 1, -1], [W - band - lw * 2.5, H - band - lw * 2.5, -1, -1]]
+      .forEach(([x, y, sx, sy]) => {
+        c.beginPath(); c.moveTo(x + sx * L, y); c.lineTo(x, y); c.lineTo(x, y + sy * L); c.stroke();
+      });
+  } else if (style === 'neon') {
+    const r = b * 1.6, m = b * .9;
+    c.lineWidth = lw * 1.2; c.strokeStyle = accent;
+    c.shadowColor = accent;
+    c.shadowBlur = b * 1.6;
+    for (let i = 0; i < 2; i++) { c.beginPath(); c.roundRect(m, m, W - 2 * m, H - 2 * m, r); c.stroke(); }
+    c.shadowBlur = 0;
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = lw * .45;
+    c.beginPath(); c.roundRect(m, m, W - 2 * m, H - 2 * m, r); c.stroke();
+    // zweite, weiche Linie nach innen
+    c.globalAlpha = .35; c.strokeStyle = accent; c.lineWidth = Math.max(1, lw * .5);
+    c.beginPath(); c.roundRect(m + b * .7, m + b * .7, W - 2 * (m + b * .7), H - 2 * (m + b * .7), r * .7); c.stroke();
+  } else if (style === 'arcade') {
+    const band = b * 1.7;
+    fillBand(c, W, H, band, band, base);
+    // Lichtkante: helle Linie außen, dunkle Linie innen
+    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = Math.max(1, b * .12);
+    c.strokeRect(b * .1, b * .1, W - b * .2, H - b * .2);
+    c.strokeStyle = 'rgba(0,0,0,.5)';
+    c.strokeRect(band - b * .06, band - b * .06, W - 2 * band + b * .12, H - 2 * band + b * .12);
+    // Gestrichelte Rennstrecke in Rahmenfarbe
+    c.strokeStyle = accent; c.lineWidth = b * .34;
+    c.setLineDash([b * 1.1, b * .7]);
+    c.strokeRect(band * .52, band * .52, W - band * 1.04, H - band * 1.04);
+    c.setLineDash([]);
+    // Nieten in den Ecken
+    [[band * .52, band * .52], [W - band * .52, band * .52], [band * .52, H - band * .52], [W - band * .52, H - band * .52]]
+      .forEach(([x, y]) => {
+        c.beginPath(); c.arc(x, y, b * .6, 0, Math.PI * 2); c.fillStyle = base; c.fill();
+        c.lineWidth = b * .12; c.strokeStyle = accent; c.stroke();
+        c.beginPath(); c.arc(x, y, b * .2, 0, Math.PI * 2); c.fillStyle = accent; c.fill();
+      });
+  } else if (style === 'film') {
+    const band = b * 2.0;
+    c.fillStyle = base;
+    c.fillRect(0, 0, W, band); c.fillRect(0, H - band, W, band);
+    c.strokeStyle = accent; c.lineWidth = lw * 1.2;
+    c.strokeRect(b * .35, band, W - b * .7, H - 2 * band);
+    // Perforation
+    const hw = b * .85, hh = b * .95, step = b * 1.9;
+    const n = Math.floor((W - b) / step);
+    const x0 = (W - (n - 1) * step) / 2;
+    c.fillStyle = 'rgba(236,236,230,.88)';
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * step;
+      c.beginPath(); c.roundRect(x - hw / 2, band / 2 - hh / 2, hw, hh, b * .2); c.fill();
+      c.beginPath(); c.roundRect(x - hw / 2, H - band / 2 - hh / 2, hw, hh, b * .2); c.fill();
+    }
+    // Schmale Seitenleisten
+    c.fillStyle = base;
+    c.fillRect(0, band, b * .35, H - 2 * band); c.fillRect(W - b * .35, band, b * .35, H - 2 * band);
+  } else if (style === 'matte') {
+    const band = b * 2.1;
+    fillBand(c, W, H, band, band, '#efe9dc');
+    // Papiermaserung
+    c.save();
+    c.beginPath(); c.rect(0, 0, W, H); c.rect(band, band, W - 2 * band, H - 2 * band); c.clip('evenodd');
+    const g = c.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(120,100,70,.18)');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.restore();
+    // Abgeschrägte Kante um das Bild
+    c.strokeStyle = 'rgba(0,0,0,.28)'; c.lineWidth = Math.max(1, b * .22);
+    c.strokeRect(band - b * .1, band - b * .1, W - 2 * band + b * .2, H - 2 * band + b * .2);
+    c.strokeStyle = accent; c.lineWidth = Math.max(1, lw * .6);
+    c.strokeRect(band * .55, band * .55, W - band * 1.1, H - band * 1.1);
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = Math.max(1, b * .1);
+    c.strokeRect(b * .05, b * .05, W - b * .1, H - b * .1);
+  }
+  c.restore();
+}
+
+function renderScene(target, longestSide) {
+  const [rw, rh] = SCENE_RATIOS[sceneRatioKey()] || [2, 3];
+  const k = longestSide / Math.max(rw, rh);
+  const W = target.width = Math.round(rw * k);
+  const H = target.height = Math.round(rh * k);
+  const c = target.getContext('2d');
+  const accent = $('colAccent').value, base = $('colCase').value;
+  const style = $('scFrame').value;
+  const isFrag = !!FRAG_STYLES[style];
+  const px = Math.max(1, Math.round(W / 640));
+  const u = Math.min(W, H) / 100;
+  const b = style === 'none' || isFrag ? 0 : $('scFrameW').value * u * .5;
+  const inset = frameInset(style, b);
+
+  // 1. Hintergrund: Gameplay-Bild oder Farbverlauf
+  if (gameplay) {
+    const bg = newCanvas(W, H);
+    const bc = bg.getContext('2d');
+    bc.imageSmoothingQuality = 'high';
+    const s = Math.max(W / gameplay.width, H / gameplay.height) * $('gpZoom').value / 100;
+    const dw = gameplay.width * s, dh = gameplay.height * s;
+    const x = (W - dw) / 2 + $('gpX').value / 100 * Math.abs(dw - W) / 2;
+    const y = (H - dh) / 2 + $('gpY').value / 100 * Math.abs(dh - H) / 2;
+    bc.drawImage(gameplay, x, y, dw, dh);
+    const blur = +$('gpBlur').value;
+    c.drawImage(blur > 0 ? softBlur(bg, 1 + blur / 2.5) : bg, 0, 0);
+  } else {
+    const g = c.createRadialGradient(W * .3, H * .35, 0, W * .5, H * .5, Math.max(W, H) * .8);
+    g.addColorStop(0, accent); g.addColorStop(1, base);
+    c.fillStyle = base; c.fillRect(0, 0, W, H);
+    c.globalAlpha = .35; c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalAlpha = 1;
+  }
+  if ($('gpDark').value > 0) { c.fillStyle = `rgba(0,0,0,${$('gpDark').value / 100})`; c.fillRect(0, 0, W, H); }
+
+  if (isFrag) {   // Rahmenstil auf das ganze Gameplay-Bild anwenden
+    const whole = newCanvas(W, H);
+    whole.getContext('2d').drawImage(target, 0, 0);
+    c.clearRect(0, 0, W, H);
+    c.drawImage(fragmentLayer(whole, W, H, {
+      style, accent, px, sides: $('scSide').value, reach: $('scReach').value / 100, dens: $('scDens').value / 100,
+      cell: +$('scCell').value, glitch: $('scGlitch').value / 100, seed: sceneSeed, lines: $('scLines').checked
+    }), 0, 0);
+  }
+
+  // Weiche Kante: unabhängig vom Rahmenstil, je Seite einzeln oder alle
+  {
+    const all = $('softAll').checked;
+    const side = { L: all || $('softL').checked, R: all || $('softR').checked, T: all || $('softT').checked, B: all || $('softB').checked };
+    if (side.L || side.R || side.T || side.B) {
+      const sw = $('softW').value / 100;
+      c.save();
+      c.globalCompositeOperation = 'destination-out';
+      const fade = (x0, y0, x1, y1, gx0, gy0, gx1, gy1) => {
+        const g = c.createLinearGradient(gx0, gy0, gx1, gy1);
+        g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+      };
+      const fw = Math.max(2, sw * W), fh = Math.max(2, sw * H);
+      if (side.L) fade(0, 0, fw, H, 0, 0, fw, 0);
+      if (side.R) fade(W - fw, 0, W, H, W, 0, W - fw, 0);
+      if (side.T) fade(0, 0, W, fh, 0, 0, 0, fh);
+      if (side.B) fade(0, H - fh, W, H, 0, H, 0, H - fh);
+      c.restore();
+    }
+  }
+
+  // 2. Hülle rendern und auf ihre sichtbare Fläche zuschneiden
+  const maxH = H - 2 * (inset.y + $('scMargin').value * u);
+  let ch = Math.min(H * $('scSize').value / 100, maxH);
+  const full = newCanvas(1, 1);
+  renderCase(full, Math.min(3200, Math.max(500, Math.round(ch * 1.35))), false);
+  const bnd = alphaBounds(full.getContext('2d'), full.width, full.height);
+  let caseImg = full, cw;
+  if (bnd) {
+    caseImg = newCanvas(bnd.x1 - bnd.x0 + 1, bnd.y1 - bnd.y0 + 1);
+    caseImg.getContext('2d').drawImage(full, bnd.x0, bnd.y0, caseImg.width, caseImg.height, 0, 0, caseImg.width, caseImg.height);
+  }
+  const aspect = caseImg.width / caseImg.height;
+  const maxW = W - 2 * (inset.x + $('scMargin').value * u);
+  if (ch * aspect > maxW) ch = maxW / aspect;
+  cw = ch * aspect;
+  caseImg = downTo(caseImg, Math.max(1, Math.round(cw)), Math.max(1, Math.round(ch)));
+  cw = caseImg.width; ch = caseImg.height;
+  if (cw <= 900) sharpen(caseImg, .28);   // nur die Hülle schärfen, nicht das Gameplay
+
+  const pad = inset.x + $('scMargin').value * u, padY = inset.y + $('scMargin').value * u;
+  const pos = $('scPos').value;
+  const pxx = pos[1] === 'l' ? pad : pos[1] === 'r' ? W - pad - cw : (W - cw) / 2;
+  const py = pos[0] === 't' ? padY : pos[0] === 'b' ? H - padY - ch : (H - ch) / 2;
+  const cx = Math.round(pxx) + cw / 2, cy = Math.round(py) + ch / 2;
+
+  // 3. Rahmen, dann Hülle darüber
+  drawFrame(c, W, H, style, b, accent, base);
+
+  const shadow = $('scShadow').value / 100, glow = $('scGlow').value / 100;
+  if (shadow > 0) {   // weiche Abdunklung hinter der Hülle
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, Math.max(cw, ch) * 1.05);
+    g.addColorStop(0, `rgba(0,0,0,${.5 * shadow})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.save(); c.beginPath(); c.rect(inset.x, inset.y, W - 2 * inset.x, H - 2 * inset.y); c.clip();
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+  }
+  const drawCase = () => c.drawImage(caseImg, cx - cw / 2, cy - ch / 2, cw, ch);
+  c.save();
+  c.imageSmoothingQuality = 'high';
+  if (glow > 0) {   // Leuchtrahmen rund um die ganze Hülle, auch wo kein Gameplay-Bild ist
+    c.shadowColor = accent; c.shadowBlur = ch * .14 * glow;
+    c.globalAlpha = Math.min(1, .5 + glow);
+    drawCase();
+    c.globalAlpha = 1;
+  }
+  if (shadow > 0) {   // Schatten nur auf vorhandene Fläche
+    c.globalCompositeOperation = 'source-atop';
+    c.shadowColor = `rgba(0,0,0,${.75 * shadow})`; c.shadowBlur = ch * .05;
+    c.shadowOffsetX = ch * .012; c.shadowOffsetY = ch * .022;
+    drawCase();
+    c.globalCompositeOperation = 'source-over';
+  }
+  c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetX = 0; c.shadowOffsetY = 0;
+  drawCase();
+  c.restore();
+}
+
 function redraw() {
   syncPickers();
-  render(canvas, Math.min(2000, Math.round(900 * Math.max(1, view.z))), true);
+  // Vorschau: bei Szene mit Zielgröße (z. B. 640 x 480) nur bei echter Pixelgröße exakt rechnen,
+  // sonst in Anzeigeauflösung, damit nichts hochgezogen und verpixelt wirkt
+  let prevLong = Math.min(2000, Math.round(900 * Math.max(1, view.z)));
+  const ov = $('outSize').value;
+  if ($('scOn').checked && isSceneSize(ov)) {
+    const exactW = +ov.slice(1), shown = (canvas.clientWidth || exactW) * view.z;
+    prevLong = Math.abs(shown - exactW) < exactW * .03 ? exactW
+      : Math.max(exactW, Math.min(2400, Math.round(shown * (window.devicePixelRatio || 1))));
+  }
+  render(canvas, prevLong, true, true);
   fitCanvas();
 }
 
@@ -1194,7 +1870,10 @@ function redraw() {
    Ansicht: Zoom (Doppelklick, Mausrad, Pinch), Verschieben, Vollansicht
 ------------------------------------------------------------------ */
 
-const view = { z: 1, x: 0, y: 0 };
+const ZMIN = 0.15, ZMAX = 8;
+const smallLayout = matchMedia('(max-width: 820px), (orientation: landscape) and (max-height: 520px)').matches;
+const Z0 = smallLayout ? 1 : 0.62;                 // am PC startet die Ansicht kleiner
+const view = { z: Z0, x: 0, y: 0 };
 const stageEl = document.querySelector('.stage');
 
 // Passt die Anzeigegröße an die Bühne an, unabhängig von der Rechenauflösung
@@ -1215,15 +1894,17 @@ function applyView() {
   view.x = Math.max(-maxX, Math.min(maxX, view.x));
   view.y = Math.max(-maxY, Math.min(maxY, view.y));
   canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
-  canvas.classList.toggle('zoomed', view.z > 1.02);
-  $('viewReset').hidden = view.z <= 1.02 && !view.x && !view.y;
+  canvas.classList.add('zoomed');
+  const shown = w && canvas.width ? Math.round(w * view.z / canvas.width * 100) : Math.round(view.z * 100);
+  $('viewReset').textContent = shown + ' %';
+  canvas.style.imageRendering = w * view.z > canvas.width * 1.5 ? 'pixelated' : 'auto';
 }
 
 let resTimer = 0;
 function setView(z, x, y) {
-  view.z = Math.max(1, Math.min(8, z));
-  view.x = view.z === 1 ? 0 : x;
-  view.y = view.z === 1 ? 0 : y;
+  view.z = Math.max(ZMIN, Math.min(ZMAX, z));
+  view.x = x;
+  view.y = y;
   applyView();
   // Nach der Geste scharf neu rechnen
   clearTimeout(resTimer);
@@ -1234,7 +1915,7 @@ function zoomAt(clientX, clientY, z2) {
   const r = stageEl.getBoundingClientRect();
   const px = clientX - (r.left + r.width / 2), py = clientY - (r.top + r.height / 2);
   const z = view.z;
-  z2 = Math.max(1, Math.min(8, z2));
+  z2 = Math.max(ZMIN, Math.min(ZMAX, z2));
   setView(z2, px - z2 * (px - view.x) / z, py - z2 * (py - view.y) / z);
 }
 
@@ -1262,7 +1943,7 @@ canvas.addEventListener('pointermove', e => {
   if (pointers.size >= 2) {
     const [a, b] = [...pointers.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-    const z2 = Math.max(1, Math.min(8, gesture.z * d / gesture.d));
+    const z2 = Math.max(ZMIN, Math.min(ZMAX, gesture.z * d / gesture.d));
     const m0x = gesture.mx - cx, m0y = gesture.my - cy;
     const mx = (a.x + b.x) / 2 - cx, my = (a.y + b.y) / 2 - cy;
     // Punkt unter den Fingern bleibt darunter, auch beim Verschieben
@@ -1270,7 +1951,7 @@ canvas.addEventListener('pointermove', e => {
   } else if (gesture.sx !== undefined) {
     const dx = e.clientX - gesture.sx, dy = e.clientY - gesture.sy;
     if (Math.hypot(dx, dy) > 6) tapMoved = true;
-    if (view.z > 1.02 && tapMoved) setView(view.z, gesture.x + dx, gesture.y + dy);
+    if (tapMoved) setView(view.z, gesture.x + dx, gesture.y + dy);
   }
 });
 const endPointer = e => {
@@ -1296,7 +1977,7 @@ canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 
 function toggleZoom(x, y) {
-  if (view.z > 1.05) setView(1, 0, 0); else zoomAt(x, y, 2.6);
+  if (Math.abs(view.z - Z0) > .05) setView(Z0, 0, 0); else zoomAt(x, y, 2.6);
 }
 canvas.addEventListener('dblclick', e => toggleZoom(e.clientX, e.clientY));
 stageEl.addEventListener('wheel', e => {
@@ -1304,7 +1985,11 @@ stageEl.addEventListener('wheel', e => {
   zoomAt(e.clientX, e.clientY, view.z * Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)));
 }, { passive: false });
 
-$('viewReset').onclick = () => { setView(1, 0, 0); };
+$('viewReset').onclick = () => { setView(Z0, 0, 0); };
+const stepZoom = f => { const r = stageEl.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, view.z * f); };
+$('zoomIn').onclick = () => stepZoom(1.25);
+$('zoomOut').onclick = () => stepZoom(1 / 1.25);
+$('zoom11').onclick = () => { const w = canvas.clientWidth; if (w) setView(canvas.width / w, 0, 0); };
 const ICON_EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function setFull(on) {
@@ -1321,7 +2006,7 @@ new ResizeObserver(() => fitCanvas()).observe(stageEl);
    Eckpunkte ziehen
 ------------------------------------------------------------------ */
 
-const handlesOn = () => ADMIN && $('showHandles').checked;
+const handlesOn = () => ADMIN && $('showHandles').checked && !$('scOn').checked;
 const activeGroups = () => ($('handleGroup').value === 'both' ? ['front', 'spine'] : [$('handleGroup').value]).filter(g => quads[g]);
 const GROUP_COLOR = { front: '#4cc38a', spine: '#5aa9ff' };
 
@@ -1447,6 +2132,25 @@ function setCover(file) {
 }
 $('coverFile').onchange = e => setCover(e.target.files[0]);
 
+function setGameplay(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    gameplay = shrink(img, 3200);
+    URL.revokeObjectURL(url);
+    $('scOn').checked = true;
+    redraw();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); alert(tr('Das Bild konnte nicht gelesen werden.')); };
+  img.src = url;
+}
+$('gpFile').onchange = e => setGameplay(e.target.files[0]);
+const dropGp = $('dropGp');
+['dragenter', 'dragover'].forEach(t => dropGp.addEventListener(t, e => { e.preventDefault(); dropGp.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => dropGp.addEventListener(t, e => { e.preventDefault(); dropGp.classList.remove('over'); }));
+dropGp.addEventListener('drop', e => setGameplay(e.dataTransfer.files[0]));
+
 const drop = $('drop');
 ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
@@ -1521,13 +2225,14 @@ function fitInto(src, W, H) {
 
 $('download').onclick = () => {
   if (!template) return;
-  const pm = PRESETS[$('outSize').value];
-  const size = outLong();
+  const sceneOn = $('scOn').checked;
+  const pm = !sceneOn && PRESETS[$('outSize').value];
+  const size = sceneOn && isSceneSize($('outSize').value) ? +$('outSize').value.slice(1) : outLong();
   const full = newCanvas(1, 1);
   render(full, size, false);
   let out = full;
 
-  const bounds = ($('outCrop').checked || pm) && alphaBounds(full.getContext('2d'), full.width, full.height);
+  const bounds = !sceneOn && ($('outCrop').checked || pm) && alphaBounds(full.getContext('2d'), full.width, full.height);
   if (bounds) {
     const pad = Math.round(size * .02);
     const x0 = Math.max(0, bounds.x0 - pad), y0 = Math.max(0, bounds.y0 - pad);
@@ -1538,7 +2243,7 @@ $('download').onclick = () => {
   if (pm) out = fitInto(out, pm[0], pm[1]);
   out.toBlob(async blob => {
     if (!blob) return;
-    const name = (($('title').value || 'cover').replace(/[\\/:*?"<>|]/g, '_').trim() || 'cover') + '.png';
+    const name = sceneOn ? 'screenshot.png' : (($('title').value || 'cover').replace(/[\\/:*?"<>|]/g, '_').trim() || 'cover') + '.png';
     const file = new File([blob], name, { type: 'image/png' });
     // Am Handy: Teilen-Menü (Fotos, Dateien ...), sonst normaler Download
     if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1568,7 +2273,21 @@ document.querySelectorAll('.pick').forEach(group => {
     };
   });
 });
+const OUT_CASE = [['512', '512 px'], ['800', '800 px'], ['1024', '1024 px'], ['1600', '1600 px'], ['2048', '2048 px'], ['pm', '400 × 600 px (PortMaster)']];
+const OUT_SCENE = [['s640', '640 × 480 px (PortMaster 4:3)'], ['s800', '800 × 600 px'], ['s1024', '1024 × 768 px'], ['s1280', '1280 × 960 px']];
+let outMode = '';
+function syncOutSizes() {
+  const mode = $('scOn').checked ? 'scene' : 'case';
+  if (mode === outMode) return;
+  outMode = mode;
+  const sel = $('outSize'), list = mode === 'scene' ? OUT_SCENE : OUT_CASE;
+  sel.innerHTML = '';
+  list.forEach(([v, t]) => sel.add(new Option(t, v)));
+  sel.value = mode === 'scene' ? 's640' : 'pm';
+  $('outCrop').closest('label').hidden = mode === 'scene';
+}
 function syncPickers() {
+  syncOutSizes();
   document.querySelectorAll('.pick').forEach(group => {
     const value = $(group.dataset.for).value;
     group.querySelectorAll('button').forEach(btn => btn.classList.toggle('on', btn.dataset.v === value));
@@ -1581,8 +2300,11 @@ function syncPickers() {
   document.querySelectorAll('input[type=range]').forEach(r => {
     document.querySelector(`.rst[data-for="${r.id}"]`).classList.toggle('dim', r.value === r.dataset.default);
   });
+  $('sceneBox').classList.toggle('off', !$('scOn').checked);
   $('frontTextBox').classList.toggle('off', !$('frontTextOn').checked);
   $('spineTextBox').classList.toggle('off', !$('spineOn').checked || !$('spineTextOn').checked);
+  $('hdrBox').classList.toggle('off', !$('hdrOn').checked);
+  $('ftrBox').classList.toggle('off', !$('ftrOn').checked);
   $('frameBox').classList.toggle('off', !$('titleFrame').checked || !$('frontTextOn').checked);
   $('titleFrame').closest('label').classList.toggle('off', !$('frontTextOn').checked);
 }
@@ -1626,6 +2348,7 @@ document.querySelectorAll('.panel input:not([type=file]):not([type=range]):not(.
   el.addEventListener('change', redraw);
 });
 $('outSize').addEventListener('change', redraw);
+$('scShuffle').onclick = () => { sceneSeed = 1 + Math.floor(Math.random() * 999); redraw(); };
 window.addEventListener('resize', fitCanvas);
 
 function showTab(name) {
@@ -1640,7 +2363,7 @@ function showTab(name) {
   if (name === 'cover' || name === 'text') $('handleGroup').value = 'front';
   redraw();
 }
-document.querySelectorAll('.tab').forEach(tab => { tab.onclick = () => showTab(tab.dataset.tab); });
+document.querySelectorAll('.tab').forEach(tab => { tab.onclick = () => showTab(tab.classList.contains('on') ? '' : tab.dataset.tab); });
 
 /* ------------------------------------------------------------------
    Start
@@ -1654,7 +2377,7 @@ $('iconId').value = '';
 if (ADMIN) document.querySelector('.tab[data-tab="template"]').hidden = false;
 applyTemplate('case');
 document.querySelectorAll('.langs button').forEach(b => { b.onclick = () => setLang(b.dataset.lang); });
-showTab('cover');
+showTab('');
 setLang(lang);
 
 if (document.fonts) document.fonts.ready.then(redraw);
